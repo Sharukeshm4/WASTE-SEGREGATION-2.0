@@ -1,0 +1,23 @@
+artifact_path: file:C:/Users/HP/Downloads/SmartWaste/mlruns/0/models/m-1cd1b8baf0db47268cced0d6f90b288b/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.13.3
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.10.1
+model_id: m-1cd1b8baf0db47268cced0d6f90b288b
+model_size_bytes: 177359
+model_uuid: m-1cd1b8baf0db47268cced0d6f90b288b
+prompts: null
+run_id: c70ebc5efa5a4787901048fb3cddc51a
+utc_time_created: '2026-03-28 12:33:30.263607'

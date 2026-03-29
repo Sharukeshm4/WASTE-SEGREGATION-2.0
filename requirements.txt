@@ -1,11 +1,11 @@
 # SmartWaste/requirements.txt
 pandas
 scikit-learn
-flask
 joblib
 mlflow
 dvc
+flask==3.0.0
+tensorflow==2.15.0
 numpy
-tensorflow
 pillow
 gunicorn
