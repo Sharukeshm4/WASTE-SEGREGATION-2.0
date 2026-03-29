@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify, render_template
 import tensorflow as tf
 import numpy as np
@@ -11,7 +12,10 @@ model = None
 def get_model():
     global model
     if model is None:
-        model = tf.keras.models.load_model("models/smartwaste_final.keras")
+        # Resolve path relative to this file so it works in any working directory
+        base = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(base, "..", "models", "smartwaste_final.keras")
+        model = tf.keras.models.load_model(os.path.normpath(model_path))
     return model
 
 

@@ -3,3 +3,8 @@ data/raw/*
 .dvc/cache/
 mlflow.db
 __pycache__/
+
+# Credentials / Secrets
+smartwaste-dvc*.json
+gdrive_sa.json
+*.json

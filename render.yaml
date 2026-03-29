@@ -1,6 +1,6 @@
 services:
   - type: web
     name: smartwaste
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app.app:app
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free

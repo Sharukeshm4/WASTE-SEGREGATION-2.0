@@ -1,17 +1,24 @@
-# Use lightweight Python image
 FROM python:3.10-slim
 
-# Set working directory
 WORKDIR /app
 
-# Copy files
 COPY . .
 
-# Install dependencies
+# Install app dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port
+# Install DVC with Google Drive support
+RUN pip install "dvc[gdrive]"
+
+# Configure DVC remote to use service account auth
+# (the JSON file path matches what start.sh writes at runtime)
+RUN dvc remote modify myremote gdrive_use_service_account true && \
+    dvc remote modify myremote gdrive_service_account_json_file_path /tmp/gdrive_sa.json
+
+# Make startup script executable
+RUN chmod +x start.sh
+
 EXPOSE 10000
 
-# Start app
-CMD ["gunicorn", "app.app:app", "--bind", "0.0.0.0:10000", "--workers", "1"]
+# start.sh writes credentials → dvc pull → gunicorn (all at runtime)
+CMD ["./start.sh"]
