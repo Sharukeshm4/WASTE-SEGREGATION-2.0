@@ -1,6 +1,5 @@
-# SmartWaste/.gitignore
+data/raw/*
+!data/raw.dvc
+.dvc/cache/
+mlflow.db
 __pycache__/
-*.pyc
-mlruns/
-data/processed/
-models/
