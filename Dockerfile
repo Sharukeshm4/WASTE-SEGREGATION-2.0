@@ -1,14 +1,17 @@
-# SmartWaste/Dockerfile
+# Use lightweight Python image
+FROM python:3.10-slim
 
-FROM python:3.9-slim
-
+# Set working directory
 WORKDIR /app
 
-# copy project
+# Copy files
 COPY . .
 
-# install dependencies
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# run pipeline first, then API
-CMD ["sh", "-c", "python -m src.pipeline && python app/app.py"]
+# Expose port
+EXPOSE 10000
+
+# Start app
+CMD ["gunicorn", "app.app:app", "--bind", "0.0.0.0:10000"]
