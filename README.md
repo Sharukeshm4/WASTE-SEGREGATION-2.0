@@ -51,3 +51,4 @@ SmartWaste AI is a deep learning-based waste classification system that identifi
 ```bash
 pip install -r requirements.txt
 python app/app.py
+Model Format: .keras (latest Keras format)
