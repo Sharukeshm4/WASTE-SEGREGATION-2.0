@@ -1,0 +1,3 @@
+# SmartWaste/.dvcignore
+.git/
+__pycache__/

@@ -1,0 +1,6 @@
+# SmartWaste/.gitignore
+__pycache__/
+*.pyc
+mlruns/
+data/processed/
+models/

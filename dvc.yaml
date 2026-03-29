@@ -1,0 +1,29 @@
+stages:
+
+  preprocess:
+    cmd: python -m src.data_preprocessing
+    deps:
+      - data/raw
+      - src/data_preprocessing.py
+    outs:
+      - data/split
+
+  train:
+    cmd: python -m src.model_training
+    deps:
+      - data/split
+      - src/model_training.py
+    outs:
+      - models/smartwaste_final.keras
+    params:
+      - params.yaml:
+
+  evaluate:
+    cmd: python -m src.model_evaluation
+    deps:
+      - models/smartwaste_final.keras
+      - data/split
+      - src/model_evaluation.py
+    metrics:
+      - metrics/eval.json:
+          cache: false

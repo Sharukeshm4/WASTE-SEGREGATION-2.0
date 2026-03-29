@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartWaste · AI Waste Classifier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #04080f;
+      --surface:  #0b1120;
+      --card:     #0f1a2e;
+      --border:   rgba(0, 255, 136, 0.12);
+      --green:    #00ff88;
+      --green-dim:#00c96a;
+      --cyan:     #00d4ff;
+      --purple:   #7b2fff;
+      --red:      #ff4d6d;
+      --text:     #e2eaf7;
+      --muted:    #5a7090;
+      --font:     'Space Grotesk', sans-serif;
+      --mono:     'JetBrains Mono', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ── Aurora background ─────────────────────────────────────── */
+    .aurora {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      overflow: hidden;
+    }
+    .aurora::before, .aurora::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.18;
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+    .aurora::before {
+      width: 600px; height: 500px;
+      background: radial-gradient(circle, var(--green), transparent 70%);
+      top: -150px; left: -100px;
+    }
+    .aurora::after {
+      width: 500px; height: 600px;
+      background: radial-gradient(circle, var(--purple), transparent 70%);
+      bottom: -100px; right: -100px;
+      animation-delay: -9s;
+      animation-direction: alternate-reverse;
+    }
+    @keyframes drift {
+      0%   { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(60px, 40px) scale(1.15); }
+    }
+
+    /* ── Layout ────────────────────────────────────────────────── */
+    .wrapper {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 0 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    header {
+      padding: 28px 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .logo-text { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
+    .logo-text span { color: var(--green); }
+    .status-pill {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 0.72rem;
+      color: var(--green);
+      background: rgba(0,255,136,0.07);
+      border: 1px solid rgba(0,255,136,0.2);
+      padding: 6px 14px; border-radius: 99px;
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+
+    /* ── Main ──────────────────────────────────────────────────── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: start;
+      padding: 40px 0;
+    }
+    @media (max-width: 720px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Left panel: scanner ───────────────────────────────────── */
+    .scanner-panel {
+      display: flex; flex-direction: column; align-items: center; gap: 28px;
+    }
+    .panel-label {
+      font-family: var(--mono); font-size: 0.7rem;
+      color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase;
+      align-self: flex-start;
+    }
+
+    /* Orbital ring drop zone */
+    .drop-zone-wrapper {
+      position: relative;
+      width: 280px; height: 280px;
+    }
+    .orbit-ring {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      border: 1.5px dashed rgba(0, 255, 136, 0.3);
+      animation: spin 14s linear infinite;
+    }
+    .orbit-ring::after {
+      content: '';
+      position: absolute;
+      top: -5px; left: calc(50% - 5px);
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px var(--green), 0 0 24px var(--green);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .orbit-ring-2 {
+      position: absolute;
+      inset: 18px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 212, 255, 0.15);
+      animation: spin 22s linear infinite reverse;
+    }
+    .orbit-ring-2::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: calc(50% - 4px);
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan);
+    }
+
+    .drop-zone {
+      position: absolute;
+      inset: 36px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(0,255,136,0.04), rgba(11,17,32,0.9));
+      border: 1px solid rgba(0,255,136,0.15);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      background: radial-gradient(circle at center, rgba(0,255,136,0.1), rgba(11,17,32,0.9));
+      border-color: var(--green);
+      box-shadow: 0 0 40px rgba(0,255,136,0.12);
+    }
+    .drop-zone .scan-beam {
+      position: absolute;
+      width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      opacity: 0;
+      top: 0;
+      transition: opacity 0.3s;
+    }
+    .drop-zone.scanning .scan-beam {
+      opacity: 1;
+      animation: scan-move 1.4s ease-in-out infinite;
+    }
+    @keyframes scan-move {
+      0%   { top: 0%;   }
+      100% { top: 100%; }
+    }
+    .drop-icon {
+      font-size: 2rem;
+      transition: transform 0.3s;
+    }
+    .drop-zone:hover .drop-icon { transform: scale(1.15); }
+    .drop-text {
+      font-size: 0.78rem; color: var(--muted); text-align: center; line-height: 1.5;
+      padding: 0 16px;
+    }
+    .drop-text strong { color: var(--green); font-weight: 500; }
+
+    /* Preview inside drop zone */
+    .preview-img {
+      position: absolute; inset: 0; border-radius: 50%;
+      object-fit: cover; width: 100%; height: 100%;
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .preview-img.visible { opacity: 1; }
+
+    #fileInput { display: none; }
+
+    .btn-analyze {
+      width: 100%;
+      padding: 14px;
+      border: none; border-radius: 12px; cursor: pointer;
+      font-family: var(--font); font-size: 0.95rem; font-weight: 600;
+      letter-spacing: 0.03em;
+      background: linear-gradient(135deg, var(--green-dim), var(--cyan));
+      color: #04080f;
+      transition: all 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .btn-analyze::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, #fff2, transparent);
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .btn-analyze:hover::after { opacity: 1; }
+    .btn-analyze:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,201,106,0.35); }
+    .btn-analyze:disabled {
+      opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none;
+    }
+
+    /* ── Right panel: results ──────────────────────────────────── */
+    .result-panel {
+      display: flex; flex-direction: column; gap: 20px;
+    }
+
+    .result-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      transition: all 0.4s ease;
+      opacity: 0; transform: translateY(16px);
+    }
+    .result-card.visible {
+      opacity: 1; transform: translateY(0);
+    }
+
+    /* Radial confidence arc */
+    .confidence-wrap {
+      display: flex; gap: 24px; align-items: center; margin-bottom: 24px;
+    }
+    .arc-wrap {
+      position: relative; flex-shrink: 0;
+      width: 110px; height: 110px;
+    }
+    .arc-wrap svg {
+      transform: rotate(-90deg);
+      width: 100%; height: 100%;
+    }
+    .arc-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+    .arc-fill {
+      fill: none;
+      stroke: var(--green);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 283;
+      stroke-dashoffset: 283;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      filter: drop-shadow(0 0 6px var(--green));
+    }
+    .arc-label {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .arc-pct {
+      font-family: var(--mono); font-size: 1.35rem; font-weight: 500;
+      line-height: 1;
+    }
+    .arc-sub {
+      font-size: 0.6rem; color: var(--muted); letter-spacing: 0.08em;
+      text-transform: uppercase; margin-top: 2px;
+    }
+
+    .result-meta { flex: 1; }
+    .result-class-label {
+      font-size: 0.65rem; font-family: var(--mono);
+      color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .result-class {
+      font-size: 2rem; font-weight: 700; letter-spacing: -0.03em;
+      text-transform: capitalize; line-height: 1;
+    }
+    .result-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 10px;
+      padding: 5px 12px; border-radius: 99px;
+      font-size: 0.72rem; font-weight: 500;
+      border: 1px solid;
+    }
+
+    /* ── All-class probability bars ───────────────────────────── */
+    .prob-grid {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .prob-row { display: flex; flex-direction: column; gap: 4px; }
+    .prob-row-header {
+      display: flex; justify-content: space-between;
+      font-size: 0.72rem;
+    }
+    .prob-name { color: var(--text); font-weight: 500; text-transform: capitalize; }
+    .prob-val  { font-family: var(--mono); color: var(--muted); }
+    .prob-track {
+      height: 5px; background: rgba(255,255,255,0.05);
+      border-radius: 99px; overflow: hidden;
+    }
+    .prob-fill {
+      height: 100%; border-radius: 99px;
+      width: 0%; transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── Disposal tip card ─────────────────────────────────────── */
+    .tip-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      font-size: 0.82rem; line-height: 1.6; color: var(--muted);
+      opacity: 0; transform: translateY(12px);
+      transition: all 0.4s ease 0.15s;
+    }
+    .tip-card.visible { opacity: 1; transform: translateY(0); }
+    .tip-title {
+      font-size: 0.65rem; font-family: var(--mono);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--cyan); margin-bottom: 8px;
+    }
+
+    /* ── Idle state ────────────────────────────────────────────── */
+    .idle-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px;
+      padding: 60px 20px;
+      border: 1px dashed rgba(255,255,255,0.06);
+      border-radius: 18px;
+      text-align: center;
+      transition: opacity 0.3s;
+    }
+    .idle-state.hidden { display: none; }
+    .idle-icon { font-size: 2.5rem; opacity: 0.25; }
+    .idle-text { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 18px 0;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.72rem; color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    /* ── Loader spinner ────────────────────────────────────────── */
+    .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(4,8,15,0.4);
+      border-top-color: #04080f;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    .btn-analyze.loading .spinner { display: inline-block; }
+    .btn-analyze.loading .btn-text { opacity: 0.6; }
+
+    /* Category colours */
+    .cat-cardboard { color: #d4a256; border-color: rgba(212,162,86,0.3); background: rgba(212,162,86,0.07); }
+    .cat-glass     { color: #64d8ff; border-color: rgba(100,216,255,0.3); background: rgba(100,216,255,0.07); }
+    .cat-metal     { color: #a0aec0; border-color: rgba(160,174,192,0.3); background: rgba(160,174,192,0.07); }
+    .cat-paper     { color: #c9b8f0; border-color: rgba(201,184,240,0.3); background: rgba(201,184,240,0.07); }
+    .cat-plastic   { color: #ff8c61; border-color: rgba(255,140,97,0.3); background: rgba(255,140,97,0.07); }
+    .cat-trash     { color: #ff4d6d; border-color: rgba(255,77,109,0.3); background: rgba(255,77,109,0.07); }
+
+    .bar-cardboard { background: linear-gradient(90deg, #d4a256, #e8bf7a); }
+    .bar-glass     { background: linear-gradient(90deg, #64d8ff, #00b4d8); }
+    .bar-metal     { background: linear-gradient(90deg, #a0aec0, #718096); }
+    .bar-paper     { background: linear-gradient(90deg, #c9b8f0, #9f7aea); }
+    .bar-plastic   { background: linear-gradient(90deg, #ff8c61, #f6643e); }
+    .bar-trash     { background: linear-gradient(90deg, #ff4d6d, #d63651); }
+  </style>
+</head>
+<body>
+<div class="aurora"></div>
+<div class="wrapper">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">♻</div>
+      <span class="logo-text">Smart<span>Waste</span></span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      AI MODEL READY
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main>
+
+    <!-- LEFT: Upload / Scanner -->
+    <div class="scanner-panel">
+      <span class="panel-label">// scan_module v2.1</span>
+
+      <div class="drop-zone-wrapper">
+        <div class="orbit-ring"></div>
+        <div class="orbit-ring-2"></div>
+        <div class="drop-zone" id="dropZone">
+          <div class="scan-beam"></div>
+          <img class="preview-img" id="previewImg" alt="preview" />
+          <div id="dropContent">
+            <div class="drop-icon">🗑️</div>
+            <p class="drop-text">Drop image here<br><strong>or click to browse</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <input type="file" id="fileInput" accept="image/*" />
+
+      <button class="btn-analyze" id="analyzeBtn" disabled>
+        <span class="spinner"></span>
+        <span class="btn-text">Analyze Waste</span>
+      </button>
+    </div>
+
+    <!-- RIGHT: Results -->
+    <div class="result-panel">
+      <span class="panel-label">// analysis_output</span>
+
+      <!-- Idle placeholder -->
+      <div class="idle-state" id="idleState">
+        <div class="idle-icon">🔬</div>
+        <p class="idle-text">Upload a waste image on the left<br>to get an instant AI classification.</p>
+      </div>
+
+      <!-- Result card -->
+      <div class="result-card" id="resultCard">
+        <div class="confidence-wrap">
+          <div class="arc-wrap">
+            <svg viewBox="0 0 100 100">
+              <circle class="arc-bg" cx="50" cy="50" r="45"/>
+              <circle class="arc-fill" id="arcFill" cx="50" cy="50" r="45"/>
+            </svg>
+            <div class="arc-label">
+              <span class="arc-pct" id="arcPct">—</span>
+              <span class="arc-sub">confidence</span>
+            </div>
+          </div>
+          <div class="result-meta">
+            <div class="result-class-label">Detected Category</div>
+            <div class="result-class" id="resultClass">—</div>
+            <span class="result-badge" id="resultBadge"></span>
+          </div>
+        </div>
+
+        <div class="prob-grid" id="probGrid"></div>
+      </div>
+
+      <!-- Tip card -->
+      <div class="tip-card" id="tipCard">
+        <div class="tip-title">♻ Disposal Guidance</div>
+        <div id="tipText"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <span>SmartWaste AI · EfficientNetB0 · 6 classes</span>
+    <span id="footerTime"></span>
+  </footer>
+
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────────────────────────
+  const CLASSES = ['cardboard','glass','metal','paper','plastic','trash'];
+
+  const TIPS = {
+    cardboard: 'Flatten all boxes before recycling. Remove tape, staples, and food residue. Keep dry — wet cardboard cannot be recycled.',
+    glass:     'Rinse thoroughly. Do not mix different colours if your facility separates them. Never put broken glass in open bins.',
+    metal:     'Rinse cans. Aluminium and steel are both recyclable. Crush cans to save space. Lids can go inside the can once clean.',
+    paper:     'Keep dry. Shredded paper may need a separate bag. Pizza boxes with grease stains go to compost, not recycling.',
+    plastic:   'Check the resin code (♳–♷). Only codes 1 and 2 are universally accepted. Remove lids and rinse containers.',
+    trash:     'General waste — dispose in a sealed bag. Check if any components can be separated for recycling first.'
+  };
+
+  const EMOJIS = {
+    cardboard: '📦', glass: '🍶', metal: '🥫', paper: '📄', plastic: '🧴', trash: '🗑️'
+  };
+
+  // ── Elements ────────────────────────────────────────────────────────────────
+  const dropZone   = document.getElementById('dropZone');
+  const fileInput  = document.getElementById('fileInput');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const previewImg = document.getElementById('previewImg');
+  const dropContent= document.getElementById('dropContent');
+  const idleState  = document.getElementById('idleState');
+  const resultCard = document.getElementById('resultCard');
+  const tipCard    = document.getElementById('tipCard');
+  const arcFill    = document.getElementById('arcFill');
+  const arcPct     = document.getElementById('arcPct');
+  const resultClass= document.getElementById('resultClass');
+  const resultBadge= document.getElementById('resultBadge');
+  const probGrid   = document.getElementById('probGrid');
+  const tipText    = document.getElementById('tipText');
+
+  let selectedFile = null;
+
+  // Footer clock
+  const clockEl = document.getElementById('footerTime');
+  setInterval(() => {
+    clockEl.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  }, 1000);
+
+  // ── Drag & drop ─────────────────────────────────────────────────────────────
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadFile(file);
+  });
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+  function loadFile(file) {
+    selectedFile = file;
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    previewImg.classList.add('visible');
+    dropContent.style.display = 'none';
+    analyzeBtn.disabled = false;
+    // Reset results
+    resultCard.classList.remove('visible');
+    tipCard.classList.remove('visible');
+    idleState.classList.remove('hidden');
+  }
+
+  // ── Analyze ─────────────────────────────────────────────────────────────────
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    analyzeBtn.classList.add('loading');
+    analyzeBtn.disabled = true;
+    dropZone.classList.add('scanning');
+
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+
+    try {
+      const res  = await fetch('/predict', { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
+
+      const conf   = data.confidence;
+      const topCls = data.prediction;
+
+      // Use real per-class probabilities from API; fallback if missing
+      let probs;
+      if (data.probabilities) {
+        probs = CLASSES.map(c => data.probabilities[c] ?? 0);
+      } else {
+        probs = makeFakeProbs(conf, CLASSES.indexOf(topCls));
+      }
+      renderResults(topCls, conf, probs);
+
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      analyzeBtn.classList.remove('loading');
+      analyzeBtn.disabled = false;
+      dropZone.classList.remove('scanning');
+    }
+  });
+
+  function makeFakeProbs(topConf, topIdx) {
+    // Distribute remaining mass across other classes
+    const remaining = 1 - topConf;
+    const others = CLASSES.length - 1;
+    const weights = CLASSES.map((_, i) => i === topIdx ? 0 : Math.random());
+    const wSum = weights.reduce((a, b) => a + b, 0);
+    return CLASSES.map((_, i) =>
+      i === topIdx ? topConf : (weights[i] / wSum) * remaining
+    );
+  }
+
+  function renderResults(cls, conf, probs) {
+    // Arc
+    const pct = Math.round(conf * 100);
+    const circumference = 283; // 2π × 45
+    const offset = circumference - (circumference * conf);
+    arcFill.style.strokeDashoffset = offset;
+
+    // Colour arc by confidence
+    arcFill.style.stroke = conf > 0.7 ? 'var(--green)' : conf > 0.45 ? 'var(--cyan)' : 'var(--red)';
+
+    arcPct.textContent = pct + '%';
+    resultClass.textContent = cls;
+
+    const badge = EMOJIS[cls] + ' ' + cls.charAt(0).toUpperCase() + cls.slice(1);
+    resultBadge.textContent = badge;
+    resultBadge.className = 'result-badge cat-' + cls;
+
+    // Probability bars
+    const sorted = CLASSES.map((c, i) => ({ cls: c, prob: probs[i] }))
+                          .sort((a, b) => b.prob - a.prob);
+    probGrid.innerHTML = sorted.map(({ cls: c, prob }) => `
+      <div class="prob-row">
+        <div class="prob-row-header">
+          <span class="prob-name">${EMOJIS[c]} ${c}</span>
+          <span class="prob-val">${(prob * 100).toFixed(1)}%</span>
+        </div>
+        <div class="prob-track">
+          <div class="prob-fill bar-${c}" data-w="${prob * 100}"></div>
+        </div>
+      </div>
+    `).join('');
+
+    // Animate bars
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.prob-fill').forEach(el => {
+        el.style.width = el.dataset.w + '%';
+      });
+    });
+
+    // Tip
+    tipText.textContent = TIPS[cls];
+
+    // Show panels
+    idleState.classList.add('hidden');
+    setTimeout(() => resultCard.classList.add('visible'), 50);
+    setTimeout(() => tipCard.classList.add('visible'), 200);
+  }
+</script>
+</body>
+</html>

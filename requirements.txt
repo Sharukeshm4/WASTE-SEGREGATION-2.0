@@ -1,0 +1,11 @@
+# SmartWaste/requirements.txt
+pandas
+scikit-learn
+flask
+joblib
+mlflow
+dvc
+numpy
+tensorflow
+pillow
+gunicorn
